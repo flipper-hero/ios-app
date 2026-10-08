@@ -1,0 +1,10 @@
+// Shared build settings for FlipperHero.
+// Personal values (signing team, bundle identifier) belong in Config/Local.xcconfig,
+// which is not committed. Copy Config/Local.xcconfig.example to get started.
+
+BUNDLE_ID_PREFIX = org.example
+// The app's bundle id; the widget extension appends ".Widgets".
+APP_BUNDLE_ID = $(BUNDLE_ID_PREFIX).FlipperHero
+DEVELOPMENT_TEAM =
+
+#include? "Local.xcconfig"

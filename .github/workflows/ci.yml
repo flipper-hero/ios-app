@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  packages:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: FlipperKit and AgentKit tests
+        run: swift test
+
+  app:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Generate project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: App and UI tests
+        run: |
+          device=$(xcrun simctl list devices available | grep -m1 -oE 'iPhone[^(]*\(([0-9A-F-]{36})\)' | grep -oE '[0-9A-F-]{36}')
+          xcodebuild test -project FlipperHero.xcodeproj -scheme FlipperHero \
+            -destination "platform=iOS Simulator,id=$device" CODE_SIGNING_ALLOWED=NO

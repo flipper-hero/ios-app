@@ -1,0 +1,20 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Xcode: the project and Info.plists are generated from project.yml by XcodeGen
+*.xcodeproj
+App/Info.plist
+Widgets/Info.plist
+DerivedData/
+build/
+xcuserdata/
+*.xcresult
+*.ipa
+*.dSYM
+*.dSYM.zip
+
+# Personal signing settings (team id, bundle id); copy Config/Local.xcconfig.example
+Config/Local.xcconfig
+
+.DS_Store
