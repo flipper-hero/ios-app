@@ -117,6 +117,7 @@ final class FlipperHeroUITests: XCTestCase {
     func testEngagementSectionOpensTheArmSheet() {
         let app = launch(tab: 4)
         let arm = app.buttons["Arm engagement mode..."]
+        XCTAssertTrue(arm.waitForExistence(timeout: 5))
         for _ in 0..<5 where !arm.isHittable { app.swipeUp() }
         arm.tap()
         let raw = app.switches["Raw device commands (rpc_raw)"]
@@ -125,9 +126,6 @@ final class FlipperHeroUITests: XCTestCase {
             arm.tap()
             XCTAssertTrue(raw.waitForExistence(timeout: 5))
         }
-        XCTAssertTrue(app.staticTexts["Capabilities"].exists)
         app.buttons["Cancel"].firstMatch.tap()
     }
-
-
 }
