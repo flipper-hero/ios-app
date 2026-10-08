@@ -109,11 +109,13 @@ private struct ActionButton: View {
                 .tint(.gray)
             case .firmwareUpdate:
                 EmptyView()
+#if !FLIPPERHERO_STORE
             case .engagement:
                 Button(intent: DisarmEngagementIntent()) {
                     Label("Disarm", systemImage: "lock.open").font(.caption.weight(.semibold))
                 }
                 .tint(.red)
+#endif
             }
         }
     }

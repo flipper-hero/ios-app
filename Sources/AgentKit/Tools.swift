@@ -54,6 +54,7 @@ public enum ToolInvocation: Sendable, Equatable {
     case firmwareUpdateStatus
     case cancelFirmwareUpdate
     case pressButtons([ButtonStep], lookAfter: Bool)
+#if !FLIPPERHERO_STORE
     case badUsbExecute(path: String)
     case gpioConfigure(pin: FlipperGPIOPin, output: Bool, pullUp: Bool?)
     case gpioRead(pin: FlipperGPIOPin)
@@ -61,6 +62,7 @@ public enum ToolInvocation: Sendable, Equatable {
     case rawRPC(request: String)
     case setEngagementMode(enabled: Bool, profile: EngagementProfile)
     case generateEngagementReport(limit: Int)
+#endif
 
     public var toolName: String {
         switch self {
@@ -104,15 +106,20 @@ public enum ToolInvocation: Sendable, Equatable {
         case .firmwareUpdateStatus: "firmware_update_status"
         case .cancelFirmwareUpdate: "cancel_firmware_update"
         case .pressButtons: "press_buttons"
+#if !FLIPPERHERO_STORE
         case .badUsbExecute: "badusb_execute"
         case .gpioConfigure, .gpioRead, .gpioWrite: "gpio"
         case .rawRPC: "rpc_raw"
         case .setEngagementMode: "set_engagement_mode"
         case .generateEngagementReport: "generate_engagement_report"
+#endif
         }
     }
 
     /// Engagement capability this tool needs armed, if any. Checked by the executor.
+#if FLIPPERHERO_STORE
+    public var armedCapability: KeyPath<EngagementProfile, Bool>? { nil }
+#else
     public var armedCapability: KeyPath<EngagementProfile, Bool>? {
         switch self {
         case .badUsbExecute: \.autoBadKB
@@ -120,6 +127,7 @@ public enum ToolInvocation: Sendable, Equatable {
         default: nil
         }
     }
+#endif
 
     /// One-line, human-readable description used for approval prompts and the audit log.
     public var summary: String {
@@ -165,6 +173,7 @@ public enum ToolInvocation: Sendable, Equatable {
         case .firmwareUpdateStatus: L("Check how the firmware update is going")
         case .cancelFirmwareUpdate: L("Cancel the running firmware update")
         case .pressButtons(let keys, _): Self.pressSummary(keys)
+#if !FLIPPERHERO_STORE
         case .badUsbExecute(let p): L("Start the Bad KB script \(p) on the Flipper now")
         case .gpioConfigure(let pin, let output, _):
             output ? L("Set GPIO pin \(pin.rawValue) to output") : L("Set GPIO pin \(pin.rawValue) to input")
@@ -176,9 +185,11 @@ public enum ToolInvocation: Sendable, Equatable {
                 ? L("Arm engagement mode (\(profile.summary))\(profile.note.isEmpty ? "" : ": \(profile.note)")")
                 : L("End engagement mode")
         case .generateEngagementReport(let n): L("Compile the last \(n) audit entries into an engagement report")
+#endif
         }
     }
 
+#if !FLIPPERHERO_STORE
     /// First protobuf message name inside a raw request's content, for the audit line.
     private static func rawCommandName(_ request: String) -> String {
         guard let data = request.data(using: .utf8),
@@ -187,6 +198,7 @@ public enum ToolInvocation: Sendable, Equatable {
               let name = props.keys.sorted().first else { return "request" }
         return name
     }
+#endif
 
     private static func pressSummary(_ keys: [ButtonStep]) -> String {
         let list = keys.map { $0.long ? L("long \($0.key.rawValue)") : $0.key.rawValue }.joined(separator: ", ")
@@ -199,8 +211,11 @@ public enum ToolInvocation: Sendable, Equatable {
     /// regardless of YOLO or auto-approve, because those are exactly what it would change.
     public var requiresExplicitConsent: Bool {
         switch self {
-        case .setYoloMode(true), .setAutoApproveMedium(true), .setYoloAsksAfterReading(false),
-             .setEngagementMode(true, _): true
+        case .setYoloMode(true), .setAutoApproveMedium(true), .setYoloAsksAfterReading(false):
+            true
+#if !FLIPPERHERO_STORE
+        case .setEngagementMode(true, _): true
+#endif
         default: false
         }
     }
@@ -303,11 +318,17 @@ public enum ToolInvocation: Sendable, Equatable {
             guard let kind = PayloadKind(rawValue: raw.lowercased()) else {
                 throw ToolError.badArguments("unknown payload type '\(raw)'")
             }
+#if FLIPPERHERO_STORE
+            guard kind != .badusb else {
+                throw ToolError.badArguments("badusb payloads are not available in this edition")
+            }
+#endif
             let desc = try string("description")
             var target = try string("path", optional: true)
             if target.isEmpty { throw ToolError.badArguments("missing target 'path'") }
             if !target.lowercased().hasSuffix("." + kind.fileExtension) { target += "." + kind.fileExtension }
             self = .forgePayload(kind: kind, description: desc, path: target)
+#if !FLIPPERHERO_STORE
         case "badusb_execute": self = .badUsbExecute(path: try string("path"))
         case "gpio":
             func pin() throws -> FlipperGPIOPin {
@@ -349,6 +370,7 @@ public enum ToolInvocation: Sendable, Equatable {
                 if case .number(let n) = value { return Int(n) } else { return nil }
             } ?? 200
             self = .generateEngagementReport(limit: min(max(raw, 1), 400))
+#endif
         default: throw ToolError.unknownTool(name)
         }
     }
@@ -361,6 +383,15 @@ public struct ToolSpec: Sendable {
 }
 
 public enum ToolCatalog {
+    /// Payload types forge_payload offers; the store edition leaves out Bad KB.
+    static var forgePayloadTypes: String {
+#if FLIPPERHERO_STORE
+        "subghz, infrared, nfc, rfid, ibutton"
+#else
+        "badusb, subghz, infrared, nfc, rfid, ibutton"
+#endif
+    }
+
     private static func object(_ props: [String: (String, String)], required: [String]) -> JSONValue {
         var properties: [String: JSONValue] = [:]
         for (key, (type, doc)) in props {
@@ -374,7 +405,8 @@ public enum ToolCatalog {
         ])
     }
 
-    public static let specs: [ToolSpec] = [
+    public static let specs: [ToolSpec] = {
+        var specs: [ToolSpec] = [
         ToolSpec(name: "list_directory", description: "List files and folders at an absolute Flipper path such as /ext/nfc.",
                  parameters: object(["path": ("string", "Absolute path under /ext")], required: ["path"])),
         ToolSpec(name: "read_file", description: "Read a small text file (max 16 KB). Binary files return only a summary.",
@@ -416,7 +448,7 @@ public enum ToolCatalog {
                  parameters: object([:], required: [])),
         ToolSpec(name: "alert_device", description: "Make the Flipper beep, blink and vibrate so the user can find it.",
                  parameters: object([:], required: [])),
-        ToolSpec(name: "forge_payload", description: "Generate a Flipper file (badusb DuckyScript, subghz, infrared, nfc, rfid, ibutton) from a description and write it to the Flipper. The full generated content is shown to the user for approval before anything is written.",
+        ToolSpec(name: "forge_payload", description: "Generate a Flipper file (\(Self.forgePayloadTypes)) from a description and write it to the Flipper. The full generated content is shown to the user for approval before anything is written.",
                  parameters: object([
                     "type": ("string", "One of: badusb, subghz, infrared, nfc, rfid, ibutton"),
                     "description": ("string", "What the file should do, in plain language"),
@@ -477,6 +509,9 @@ public enum ToolCatalog {
                     "required": .array([.string("keys")]),
                     "additionalProperties": .bool(false),
                  ])),
+        ]
+        #if !FLIPPERHERO_STORE
+        specs += [
         ToolSpec(name: "badusb_execute",
                  description: "Start a Bad KB script immediately, without anyone pressing Run on the Flipper. Only available after the operator armed engagement mode with auto_badusb; ask them to arm it first. Keystrokes go to whatever machine the Flipper is plugged into.",
                  parameters: object(["path": ("string", "Absolute path to a .txt script, e.g. from forge_payload or write_file")], required: ["path"])),
@@ -504,7 +539,10 @@ public enum ToolCatalog {
         ToolSpec(name: "generate_engagement_report",
                  description: "Compile recent audit log entries into a markdown engagement report: every action with time, tool, risk, decision and outcome. Use it at the end of an engagement, or when the operator asks for a timeline or report.",
                  parameters: object(["limit": ("integer", "How many entries, 1 to 400, default 200")], required: [])),
-    ]
+        ]
+        #endif
+        return specs
+    }()
 }
 
 /// One button press for `press_buttons`, parsed from "ok" or "long_back".

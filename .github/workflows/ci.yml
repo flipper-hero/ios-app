@@ -15,6 +15,9 @@ jobs:
       - name: FlipperKit and AgentKit tests
         run: swift test
 
+      - name: Store edition compiles
+        run: swift build -Xswiftc -D -Xswiftc FLIPPERHERO_STORE
+
   app:
     runs-on: macos-15
     steps:

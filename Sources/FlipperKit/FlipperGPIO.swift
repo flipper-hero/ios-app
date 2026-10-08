@@ -1,3 +1,4 @@
+#if !FLIPPERHERO_STORE
 import Foundation
 import FlipperProto
 
@@ -58,3 +59,4 @@ extension FlipperRPCClient {
         _ = try await call(.gpioWritePin(request))
     }
 }
+#endif

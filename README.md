@@ -151,6 +151,12 @@ What stays, in every mode:
 - Reading device content still fences it as untrusted, because a prompt-injected agent is an opsec
   problem, not a safety checkbox.
 
+**Two editions.** This repository is the full edition. The App Store edition is built from the
+same sources with `FLIPPERHERO_STORE`, which compiles the red team capabilities out entirely:
+no Bad KB auto-run, no raw device commands, no GPIO, no engagement mode, and a neutral assistant
+prompt. Nothing is hidden behind a switch in the store binary; the capabilities are not in it.
+Build it with `scripts/build-store.sh`, see [AGENTS.md](AGENTS.md).
+
 ### Roadmap
 
 - [ ] **Wi-Fi Marauder**: drive a Marauder companion app on a GPIO Wi-Fi dev board for passive

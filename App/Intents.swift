@@ -49,10 +49,12 @@ enum ShortcutRunner {
         return try await run(tool: "cancel_firmware_update", intent: intent)
     }
 
+#if !FLIPPERHERO_STORE
     /// Disarming needs no device and no confirmation, so it never touches the shortcut flow.
     static func disarmEngagement() {
         Task { @MainActor in AppModel.shared.applyEngagement(.inactive, audit: true) }
     }
+#endif
 
     private static func confirm<Intent: AppIntent>(_ request: ApprovalRequest, intent: Intent) async -> Bool {
         // Summary and reason are already localized; joining them needs no grammar of its own.

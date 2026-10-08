@@ -148,9 +148,11 @@ final class AppModel {
 
     /// Applies arming from either the arm dialog (audited) or an approved agent request
     /// (already audited by the executor). Disarming is always free.
+    /// The store edition keeps this inert: nothing in it can arm.
     func applyEngagement(_ state: EngagementState, audit: Bool) {
         guard state != engagement else { return }
         engagement = state
+#if !FLIPPERHERO_STORE
         if audit {
             let invocation = ToolInvocation.setEngagementMode(enabled: state.active, profile: state.profile)
             let risk = RiskAssessor.assess(invocation)
@@ -164,6 +166,7 @@ final class AppModel {
             liveActivities.engagementStopped()
         }
         Task { await session?.updateEngagement(state) }
+#endif
     }
 
     /// False after a manual disconnect, so the app does not fight the user within this session.
@@ -651,11 +654,13 @@ final class AppModel {
             noteToolOutcome(name: "emulate_nfc", arguments: #"{"path":"/ext/nfc/Office_Badge.nfc"}"#,
                             result: .ok("Emulating"))
         }
+#if !FLIPPERHERO_STORE
         if ProcessInfo.processInfo.environment["FH_DEMO_ENGAGED"] == "1" {
             engagement = EngagementState(active: true,
                                          profile: EngagementProfile(note: "demo, authorized"),
                                          startedAt: .now)
         }
+#endif
         if withApproval {
             let invocation = ToolInvocation.setYoloMode(true)
             let risk = RiskAssessor.assess(invocation)

@@ -1,3 +1,4 @@
+#if !FLIPPERHERO_STORE
 import Foundation
 
 /// Turns the audit log into a markdown engagement report: the timeline an operator
@@ -50,3 +51,4 @@ public enum EngagementReport {
         Untrusted.sanitizeName(text.replacingOccurrences(of: "|", with: "\\|"))
     }
 }
+#endif

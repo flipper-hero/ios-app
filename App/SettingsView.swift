@@ -8,7 +8,9 @@ struct SettingsView: View {
     @State private var keyInput = ""
     @State private var keyStored = false
     @State private var confirmYolo = false
+#if !FLIPPERHERO_STORE
     @State private var showArmSheet = false
+#endif
     @AppStorage(AppModel.autoConnectKey) private var autoConnect = true
     @State private var saveError: String?
 
@@ -81,6 +83,7 @@ struct SettingsView: View {
                     Text("The agent changes, deletes, transmits and emulates without asking. Blocked paths (internal storage, key files, top-level recursive deletes) stay blocked. Resets when the app restarts. With the second switch on, the agent still asks after it read files from your Flipper, which is when a planted instruction could trick it.")
                 }
 
+#if !FLIPPERHERO_STORE
                 Section {
                     LabeledContent("Status", value: model.engagement.active
                         ? String(localized: "Armed (\(model.engagement.profile.summary))")
@@ -98,6 +101,7 @@ struct SettingsView: View {
                 } header: { Text("Engagement mode") } footer: {
                     Text("For authorized engagements: pre-approves actions for this session so the agent can work without a prompt per step. Blocked paths stay blocked, everything is audited, and it disarms on disconnect or app restart. The agent can request arming in chat, but only you can confirm it.")
                 }
+#endif
 
                 Section {
                     NavigationLink("Audit log") { AuditView() }
@@ -106,7 +110,9 @@ struct SettingsView: View {
             .themedList()
             .brandedNavigation("Settings")
             .onAppear { keyStored = model.hasAPIKey }
+#if !FLIPPERHERO_STORE
             .sheet(isPresented: $showArmSheet) { EngagementArmSheet() }
+#endif
             .confirmationDialog("Enable YOLO mode?", isPresented: $confirmYolo, titleVisibility: .visible) {
                 Button("Enable YOLO", role: .destructive) { model.yolo = true }
                 Button("Cancel", role: .cancel) {}
@@ -117,6 +123,7 @@ struct SettingsView: View {
     }
 }
 
+#if !FLIPPERHERO_STORE
 /// The operator arms engagement mode here: capabilities, scope note, then a deliberate hold.
 struct EngagementArmSheet: View {
     @Environment(AppModel.self) private var model
@@ -164,6 +171,7 @@ struct EngagementArmSheet: View {
         .presentationDetents([.medium, .large])
     }
 }
+#endif
 
 extension SettingsView {
     /// Shows only the prefix and length, never the key itself.
@@ -193,6 +201,7 @@ struct AuditView: View {
         .navigationTitle("Audit log")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+#if !FLIPPERHERO_STORE
             if !model.auditRecords.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
                     ShareLink(item: EngagementReport.markdown(
@@ -201,6 +210,7 @@ struct AuditView: View {
                     }
                 }
             }
+#endif
         }
         .task { await model.loadAudit() }
     }

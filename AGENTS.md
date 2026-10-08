@@ -83,6 +83,33 @@ step. The invariants:
 - The operator's scope note is shown on the banner, the Live Activity and in the system prompt.
   It is free text from a human, but still fenced like other content before it reaches the model.
 
+## Editions
+
+There are two editions of the same sources, split at compile time by `FLIPPERHERO_STORE`:
+
+- **Open source edition** (default; `Debug`, `Release`, `swift test`): everything.
+- **Store edition** (`DebugStore`, `ReleaseStore`, the `FlipperHeroStore` scheme): compiles the
+  red team capabilities out entirely. Stripped: `badusb_execute`, `rpc_raw`, `gpio`,
+  `set_engagement_mode`, `generate_engagement_report`, the badusb kind of `forge_payload`, the
+  engagement UI (arm sheet, banner, Live Activity, disarm intent) and the operator persona in
+  `AgentPrompts` (the store prompt is the neutral assistant). What remains is in line with what
+  the official Flipper app already offers on the App Store.
+
+Rules that are not negotiable:
+
+- The flag reaches the SwiftPM packages only through the command line, so a store build must go
+  through `scripts/build-store.sh`. Building the `FlipperHeroStore` scheme without the script
+  produces the full open source edition in store clothes; never upload that.
+- The store edition must not contain a runtime switch that re-enables anything. Capabilities are
+  removed by `#if`, not hidden by a setting. If you add a red team capability, extend the `#if`
+  guards and the stripped-string check in the same change.
+- The store listing describes the store edition. The readme says plainly that the open source
+  build has more.
+
+Verify a store build by scanning the products: `strings FlipperHero.debug.dylib | grep
+badusb_execute` must come up empty, and `swift build -Xswiftc -D -Xswiftc FLIPPERHERO_STORE` must
+compile. CI runs that compile check.
+
 ## Localization
 
 FlipperHero ships in English, German, French, Spanish, Portuguese (Brazil), Italian, Russian,

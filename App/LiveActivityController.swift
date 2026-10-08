@@ -17,6 +17,7 @@ final class LiveActivityController {
         }
     }
 
+#if !FLIPPERHERO_STORE
     func engagementStarted(device: String, note: String) {
         end(engagement)
         engagement = request(kind: .engagement, device: device,
@@ -30,6 +31,7 @@ final class LiveActivityController {
         end(engagement)
         engagement = nil
     }
+#endif
 
     func emulationStarted(device: String, title: String, kind: String) {
         end(emulation)

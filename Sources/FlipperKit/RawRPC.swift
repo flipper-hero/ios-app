@@ -1,3 +1,4 @@
+#if !FLIPPERHERO_STORE
 import Foundation
 import FlipperProto
 
@@ -31,3 +32,4 @@ extension FlipperRPCClient {
         return out
     }
 }
+#endif

@@ -9,7 +9,10 @@ import Foundation
 /// an emulation on the Flipper, a firmware update or an armed engagement.
 struct FlipperActivityAttributes: ActivityAttributes {
     enum Kind: String, Codable, Hashable {
-        case emulation, firmwareUpdate, engagement
+        case emulation, firmwareUpdate
+#if !FLIPPERHERO_STORE
+        case engagement
+#endif
     }
 
     struct ContentState: Codable, Hashable {
@@ -56,6 +59,7 @@ struct CancelFirmwareUpdateIntent: LiveActivityIntent {
     }
 }
 
+#if !FLIPPERHERO_STORE
 /// Ends engagement mode from the Lock Screen. Disarming is always free, so no confirmation.
 struct DisarmEngagementIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Disarm Engagement Mode"
@@ -71,3 +75,4 @@ struct DisarmEngagementIntent: LiveActivityIntent {
         #endif
     }
 }
+#endif

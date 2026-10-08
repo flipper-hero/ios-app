@@ -31,6 +31,9 @@ public enum PayloadKind: String, Sendable, CaseIterable {
     var formatReference: String {
         switch self {
         case .badusb:
+#if FLIPPERHERO_STORE
+            "" // unreachable in the store edition
+#else
             """
             Flipper "Bad KB" DuckyScript. One command per line.
 
@@ -50,6 +53,7 @@ public enum PayloadKind: String, Sendable, CaseIterable {
             Start with REM lines describing what the script does. Begin with a DELAY of at least 500
             so the host enumerates the keyboard before typing.
             """
+#endif
         case .subghz:
             """
             Flipper Sub-GHz file. Two forms.
@@ -193,6 +197,9 @@ public struct PayloadForge: Sendable {
         let lines = content.components(separatedBy: "\n")
         switch kind {
         case .badusb:
+#if FLIPPERHERO_STORE
+            return // unreachable: the store edition rejects badusb before forging
+#else
             let known: Set<String> = [
                 "REM", "DELAY", "DEFAULTDELAY", "DEFAULT_DELAY", "STRINGDELAY", "STRING_DELAY",
                 "DEFAULTSTRINGDELAY", "DEFAULT_STRING_DELAY", "STRING", "STRINGLN", "REPEAT", "HOLD",
@@ -217,6 +224,7 @@ public struct PayloadForge: Sendable {
                     throw ForgeError.wrongFormat("unknown command '\(head)'")
                 }
             }
+#endif
         case .subghz, .infrared, .nfc, .rfid, .ibutton:
             guard lines.first?.hasPrefix("Filetype:") == true else {
                 throw ForgeError.wrongFormat("must start with a Filetype: header")

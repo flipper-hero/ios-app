@@ -114,8 +114,12 @@ public actor ToolExecutor {
             let name = invocation.toolName
             await audit.record(.init(tool: name, summary: invocation.summary, risk: assessment.level,
                                      decision: .blocked, succeeded: false, detail: "capability not armed"))
+#if FLIPPERHERO_STORE
+            return .error("'\(name)' is not available in this edition. Do not retry.")
+#else
             return .error("'\(name)' is not available: engagement mode is not armed for this capability. "
                 + "Tell the operator to arm it (Settings > Engagement mode, or approve set_engagement_mode) and stop retrying until then.")
+#endif
         }
 
         var decision = AuditRecord.Decision.auto
@@ -414,6 +418,7 @@ public actor ToolExecutor {
             try await flipper.playAlert()
             return "The Flipper is beeping and blinking"
 
+#if !FLIPPERHERO_STORE
         case .badUsbExecute(let path):
             // The Bad KB app lands on its work view when opened with a file; the OK input
             // event is the firmware's own start/stop control (bad_usb_scene_work_on_event).
@@ -461,6 +466,7 @@ public actor ToolExecutor {
             tainted = true
             let report = EngagementReport.markdown(records: records, engagement: settings().engagement)
             return Untrusted.wrap(report, source: "engagement report", nonce: nonce)
+#endif
         }
     }
 

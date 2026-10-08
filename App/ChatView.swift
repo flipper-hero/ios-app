@@ -28,7 +28,9 @@ struct ChatView: View {
                 Theme.glow
                 VStack(spacing: 0) {
                     if !ready { notice }
+#if !FLIPPERHERO_STORE
                     if model.engagement.active { EngagementBanner() }
+#endif
                     if model.chat.isEmpty && !model.isBusy { emptyState } else { transcript }
                     composer
                 }
@@ -68,6 +70,7 @@ struct ChatView: View {
     }
 
     /// Shown while engagement mode is armed, so the operator always sees the session state.
+#if !FLIPPERHERO_STORE
     private struct EngagementBanner: View {
         @Environment(AppModel.self) private var model
 
@@ -93,6 +96,7 @@ struct ChatView: View {
             .padding(.horizontal, 10).padding(.top, 6)
         }
     }
+#endif
 
     // MARK: Empty state
 
@@ -315,11 +319,13 @@ private struct ToolCard: View {
         case "rename", "move": "arrow.left.arrow.right"
         case "launch_app": "play.rectangle"
         case "delete": "trash"
+#if !FLIPPERHERO_STORE
         case "badusb_execute": "keyboard"
         case "rpc_raw": "terminal"
         case "gpio": "cable.connector"
         case "set_engagement_mode": "shield.lefthalf.filled"
         case "generate_engagement_report": "list.clipboard"
+#endif
         default: "wrench.and.screwdriver"
         }
     }

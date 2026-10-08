@@ -106,6 +106,7 @@ public enum RiskAssessor {
                 return .init(level: .blocked, reasons: [L("refusing recursive delete of a top-level folder")])
             }
             return .init(level: .high, reasons: [recursive ? L("deletes a folder and its contents") : L("deletes data")])
+#if !FLIPPERHERO_STORE
         case .badUsbExecute(let p):
             return physical(p, L("types a keystroke-injection script into the connected machine on its own"))
         case .gpioConfigure(let pin, let output, _):
@@ -127,6 +128,7 @@ public enum RiskAssessor {
             return .init(level: .high, reasons: reasons)
         case .generateEngagementReport:
             return .init(level: .low, reasons: [L("reads the audit log")])
+#endif
         }
     }
 
