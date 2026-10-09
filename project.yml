@@ -46,6 +46,7 @@ targets:
         NSCameraUsageDescription: Show the agent a remote, a label or a device so it can help identify it.
         NSPhotoLibraryUsageDescription: Attach a picture from your library to a message.
         NSSupportsLiveActivities: true
+        ITSAppUsesNonExemptEncryption: false
         UILaunchScreen:
           UIColorName: LaunchBackground
         UIBackgroundModes:

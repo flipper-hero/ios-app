@@ -105,6 +105,8 @@ struct SettingsView: View {
 
                 Section {
                     NavigationLink("Audit log") { AuditView() }
+                    Link("Privacy Policy", destination: URL(string: "https://github.com/flipper-hero/ios-app/blob/main/PRIVACY.md")!)
+                    Link("Support on GitHub", destination: URL(string: "https://github.com/flipper-hero/ios-app/issues")!)
                 }
             }
             .themedList()
