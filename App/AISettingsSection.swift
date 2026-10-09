@@ -29,6 +29,11 @@ struct AISettingsSection: View {
             .accessibilityIdentifier("aiProviderPicker")
             .disabled(isTesting || model.isBusy)
 
+            SecureField(keyStored ? String(localized: "Key stored (enter a new one to replace)") : String(localized: "API key"), text: $keyInput)
+                .textContentType(.password).autocorrectionDisabled().textInputAutocapitalization(.never)
+                .accessibilityIdentifier("aiAPIKey")
+                .disabled(isTesting || model.isBusy)
+
             NavigationLink {
                 AIModelPicker(settings: settings, apiKey: candidateKey, isDemo: model.isDemo, selection: $modelName)
             } label: {
@@ -46,11 +51,6 @@ struct AISettingsSection: View {
             TextField("Model ID", text: $modelName)
                 .autocorrectionDisabled().textInputAutocapitalization(.never)
                 .accessibilityIdentifier("aiModelID")
-                .disabled(isTesting || model.isBusy)
-
-            SecureField(keyStored ? String(localized: "Key stored (enter a new one to replace)") : String(localized: "API key"), text: $keyInput)
-                .textContentType(.password).autocorrectionDisabled().textInputAutocapitalization(.never)
-                .accessibilityIdentifier("aiAPIKey")
                 .disabled(isTesting || model.isBusy)
 
             DisclosureGroup("API base URL") {

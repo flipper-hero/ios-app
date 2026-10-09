@@ -41,7 +41,7 @@ targets:
       properties:
         CFBundleDisplayName: FlipperHero
         CFBundleShortVersionString: "1.0"
-        CFBundleVersion: "2"
+        CFBundleVersion: "3"
         NSBluetoothAlwaysUsageDescription: FlipperHero connects to your Flipper Zero over Bluetooth.
         NSMicrophoneUsageDescription: Speak to the agent instead of typing.
         NSSpeechRecognitionUsageDescription: Your spoken message is turned into text for the agent.
@@ -83,7 +83,7 @@ targets:
       properties:
         CFBundleDisplayName: FlipperHero
         CFBundleShortVersionString: "1.0"
-        CFBundleVersion: "2"
+        CFBundleVersion: "3"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     configFiles:
