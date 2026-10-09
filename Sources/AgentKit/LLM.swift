@@ -19,11 +19,14 @@ public struct ChatMessage: Sendable, Equatable {
     public var toolCallID: String?
     /// JPEG data sent alongside `content`, for models that accept images.
     public var images: [Data]
+    /// Opaque provider fields required when continuing a tool-calling reasoning turn.
+    public var reasoning: [String: JSONValue]
 
     public init(role: ChatRole, content: String?, toolCalls: [ToolCall] = [], toolCallID: String? = nil,
-                images: [Data] = []) {
+                images: [Data] = [], reasoning: [String: JSONValue] = [:]) {
         self.role = role; self.content = content; self.toolCalls = toolCalls
         self.toolCallID = toolCallID; self.images = images
+        self.reasoning = reasoning
     }
 }
 
@@ -42,21 +45,25 @@ public enum LLMError: Error, Equatable, CustomStringConvertible {
     }
 }
 
-/// OpenAI-compatible chat completions with tool calling, as served by OpenRouter.
-public struct OpenRouterClient: LLMClient {
+/// OpenAI-compatible chat completions with tool calling.
+public struct ChatCompletionsClient: LLMClient {
     public var apiKey: String
     public var model: String
     public var endpoint: URL
     public var session: URLSession
+    public var provider: AIProvider
+    var connectionTest = false
 
     public init(apiKey: String, model: String,
                 endpoint: URL = URL(string: "https://openrouter.ai/api/v1/chat/completions")!,
+                provider: AIProvider = .openrouter,
                 session: URLSession = .shared) {
         self.apiKey = apiKey; self.model = model; self.endpoint = endpoint; self.session = session
+        self.provider = provider
     }
 
     func makeRequestBody(messages: [ChatMessage], tools: [ToolSpec]) throws -> Data {
-        let wireMessages: [[String: Any]] = messages.map { m in
+        let wireMessages: [[String: Any]] = try messages.map { m in
             var d: [String: Any] = ["role": m.role.rawValue]
             if !m.images.isEmpty {
                 var parts: [[String: Any]] = []
@@ -78,9 +85,19 @@ public struct OpenRouterClient: LLMClient {
                 }
             }
             if let id = m.toolCallID { d["tool_call_id"] = id }
+            for (key, value) in m.reasoning where m.role == .assistant {
+                d[key] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(value), options: .fragmentsAllowed)
+            }
             return d
         }
-        var body: [String: Any] = ["model": model, "messages": wireMessages, "temperature": 0.2]
+        var body: [String: Any] = ["model": model, "messages": wireMessages]
+        if provider == .openrouter { body["temperature"] = 0.2 }
+        if provider == .minimax { body["reasoning_split"] = true }
+        if connectionTest {
+            body["max_tokens"] = 1024
+            if provider == .minimax && model == "MiniMax-M3" { body["thinking"] = ["type": "disabled"] }
+            if provider == .kimi && model == "kimi-k3" { body["reasoning_effort"] = "low" }
+        }
         if !tools.isEmpty {
             let encoder = JSONEncoder()
             body["tools"] = try tools.map { spec -> [String: Any] in
@@ -104,7 +121,15 @@ public struct OpenRouterClient: LLMClient {
                   let name = fn["name"] as? String else { return nil }
             return ToolCall(id: id, name: name, arguments: fn["arguments"] as? String ?? "{}")
         }
-        return ChatMessage(role: .assistant, content: message["content"] as? String, toolCalls: calls)
+        var reasoning: [String: JSONValue] = [:]
+        for key in ["reasoning_content", "reasoning_details", "reasoning"] {
+            if let value = message[key] {
+                let data = try JSONSerialization.data(withJSONObject: value, options: .fragmentsAllowed)
+                reasoning[key] = try JSONDecoder().decode(JSONValue.self, from: data)
+            }
+        }
+        return ChatMessage(role: .assistant, content: message["content"] as? String, toolCalls: calls,
+                           reasoning: reasoning)
     }
 
     public func complete(messages: [ChatMessage], tools: [ToolSpec]) async throws -> ChatMessage {
@@ -115,12 +140,11 @@ public struct OpenRouterClient: LLMClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("FlipperHero", forHTTPHeaderField: "X-Title")
         request.httpBody = try makeRequestBody(messages: messages, tools: tools)
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await session.data(for: request, delegate: ProviderRequestDelegate())
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(status) else {
-            let message = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])
-                .flatMap { ($0["error"] as? [String: Any])?["message"] as? String } ?? "request failed"
-            throw LLMError.http(status, message)
+            // Error bodies can echo a credential. Only expose the status to UI and tools.
+            throw ProviderError.status(status)
         }
         return try Self.parseResponse(data)
     }

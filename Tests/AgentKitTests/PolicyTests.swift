@@ -87,7 +87,7 @@ final class PolicyTests: XCTestCase {
     }
 
     func testOpenRouterBodyAndParsing() throws {
-        let client = OpenRouterClient(apiKey: "k", model: "m/x")
+        let client = ChatCompletionsClient(apiKey: "k", model: "m/x")
         let call = ToolCall(id: "c1", name: "list_directory", arguments: #"{"path":"/ext"}"#)
         let body = try client.makeRequestBody(
             messages: [ChatMessage(role: .user, content: "hi"),
@@ -103,9 +103,9 @@ final class PolicyTests: XCTestCase {
         XCTAssertEqual(msgs[2]["tool_call_id"] as? String, "c1")
 
         let response = #"{"choices":[{"message":{"content":null,"tool_calls":[{"id":"x","type":"function","function":{"name":"read_file","arguments":"{\"path\":\"/ext/a\"}"}}]}}]}"#
-        let parsed = try OpenRouterClient.parseResponse(Data(response.utf8))
+        let parsed = try ChatCompletionsClient.parseResponse(Data(response.utf8))
         XCTAssertEqual(parsed.toolCalls.first?.name, "read_file")
         XCTAssertNil(parsed.content)
-        XCTAssertThrowsError(try OpenRouterClient.parseResponse(Data("{}".utf8)))
+        XCTAssertThrowsError(try ChatCompletionsClient.parseResponse(Data("{}".utf8)))
     }
 }

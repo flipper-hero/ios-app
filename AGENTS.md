@@ -14,7 +14,7 @@ Exactly one class of exceptions, and it is deliberate:
   auto-approve for medium risk, and turning off "still ask after reading Flipper content" are tools,
   but they are marked `requiresExplicitConsent` and always show the user a permission dialog, even
   when YOLO or auto-approve is already on. Tightening (turning any of these off) needs no dialog.
-- **Credentials are out of reach.** No tool reads or writes the OpenRouter API key.
+- **Credentials are out of reach.** No tool reads or writes provider API keys.
   `get_app_settings` only reports whether one is stored.
 - Connecting to and disconnecting from a Flipper is not a tool: the agent only exists while connected.
 
@@ -31,7 +31,8 @@ Current mapping, keep it up to date:
 | Files: browse, open | `list_directory`, `read_file` |
 | Settings: YOLO, ask-after-reading, auto-approve medium | `set_yolo_mode`, `set_yolo_asks_after_reading`, `set_auto_approve_medium` (consent dialog when loosening) |
 | Settings: engagement mode arm dialog, banner, Live Activity | `set_engagement_mode` (consent dialog when arming) |
-| Settings: auto-connect, model | `set_auto_connect`, `set_model` |
+| Settings: auto-connect, provider, model, regional API base URL | `set_auto_connect`, `set_ai_provider`, `set_model` |
+| Settings: model catalog, connection test | `list_models`, `test_model_connection` (uses a stored key; saving/removing keys remains credential-only UI) |
 | Settings: audit log | `get_audit_log` |
 | Settings: audit log report export | `generate_engagement_report` |
 | Settings: read the current values | `get_app_settings` |
@@ -132,7 +133,7 @@ Ukrainian, Polish, Turkish, Arabic, Hindi, Simplified Chinese, Japanese and Kore
 
 - `Sources/FlipperProto`: generated protobuf Swift (`scripts/gen-proto.sh`). Do not edit by hand.
 - `Sources/FlipperKit`: framing, `FlipperRPCClient`, device API, CoreBluetooth transport.
-- `Sources/AgentKit`: tools, risk, approval, executor, session, OpenRouter client, catalogs.
+- `Sources/AgentKit`: tools, risk, approval, executor, session, provider APIs, catalogs.
 - `App/`: SwiftUI app, intents (`Intents.swift`). `project.yml` is the XcodeGen spec; the `.xcodeproj` is generated.
 - `Widgets/`: widget extension with the Live Activity. `Shared/`: compiled into app and extension;
   code that needs the app is behind `#if !WIDGET_EXTENSION`.

@@ -352,6 +352,8 @@ public actor ToolExecutor {
             read_replies_aloud: \(s.readAloud)
             auto_connect_on_launch: \(s.autoConnect)
             model: \(s.model)
+            ai_provider: \(s.provider)
+            api_base_url: \(s.apiBaseURL)
             api_key_stored: \(s.apiKeyStored)
             """
 
@@ -384,6 +386,20 @@ public actor ToolExecutor {
             guard let appControls else { throw CatalogError.malformed }
             await appControls.setModel(model)
             return "The next chat uses \(model)."
+        case .setProvider(let provider, let baseURL):
+            guard let appControls else { throw CatalogError.malformed }
+            try await appControls.setProvider(provider, baseURL: baseURL)
+            return "The next chat uses \(provider.name). Previous conversation is not forwarded."
+        case .listModels:
+            guard let appControls else { throw CatalogError.malformed }
+            let models = try await appControls.listModels()
+            tainted = true
+            return Untrusted.wrap(models.map { "\($0.id): \($0.name)" }.joined(separator: "\n"),
+                                  source: "provider model catalog", nonce: nonce)
+        case .testConnection:
+            guard let appControls else { throw CatalogError.malformed }
+            try await appControls.testConnection()
+            return "The selected model replied to the test prompt."
 
         case .installFirmwareUpdate:
             guard let appControls else { throw CatalogError.malformed }

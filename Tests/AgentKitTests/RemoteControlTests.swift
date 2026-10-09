@@ -82,7 +82,7 @@ final class RemoteControlTests: XCTestCase {
 
     func testPNGImagesAreLabelledAsPNG() throws {
         let png = Data([0x89, 0x50, 0x4E, 0x47, 0, 0])
-        let body = try OpenRouterClient(apiKey: "k", model: "m")
+        let body = try ChatCompletionsClient(apiKey: "k", model: "m")
             .makeRequestBody(messages: [ChatMessage(role: .user, content: "x", images: [png])], tools: [])
         let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
         let message = try XCTUnwrap((json["messages"] as? [[String: Any]])?.first)

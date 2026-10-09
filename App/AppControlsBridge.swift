@@ -18,7 +18,30 @@ final class AppControlsBridge: AppControls {
     func setYolo(_ enabled: Bool) async { model?.yolo = enabled }
     func setYoloAsksAfterReading(_ enabled: Bool) async { model?.yoloAsksAfterUntrusted = enabled }
     func setAutoApproveMedium(_ enabled: Bool) async { UserDefaults.standard.set(enabled, forKey: AppModel.autoApproveKey) }
-    func setModel(_ model: String) async { UserDefaults.standard.set(model, forKey: AppModel.modelKey) }
+    func setModel(_ name: String) async {
+        guard let model else { return }
+        var settings = model.aiSettings
+        settings.model = name
+        model.applyAISettings(settings)
+    }
+    func setProvider(_ provider: AIProvider, baseURL: String?) async throws {
+        guard let model else { return }
+        var settings = AISettings.load(provider)
+        if let baseURL { settings.baseURL = try provider.validatedBaseURL(baseURL).absoluteString }
+        model.applyAISettings(settings)
+    }
+    func listModels() async throws -> [AIModel] {
+        guard let model, let key = KeychainStore.read(model.aiProvider.rawValue), !key.isEmpty else {
+            throw ProviderError.missingKey
+        }
+        return try await model.aiSettings.api(key: key).models()
+    }
+    func testConnection() async throws {
+        guard let model, let key = KeychainStore.read(model.aiProvider.rawValue), !key.isEmpty else {
+            throw ProviderError.missingKey
+        }
+        try await model.aiSettings.api(key: key).test(model: model.currentModel)
+    }
     func setEngagement(_ state: EngagementState) async { model?.applyEngagement(state, audit: false) }
     func restartDevice() async throws { try await model?.restartFlipper() }
     func startFirmwareUpdate() async throws -> String {

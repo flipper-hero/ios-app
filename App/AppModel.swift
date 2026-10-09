@@ -62,9 +62,7 @@ final class AppModel {
         case idle, scanning, connecting(String), connected(String), failed(String)
     }
 
-    static let defaultModel = "anthropic/claude-sonnet-4.5"
     nonisolated static let autoApproveKey = "autoApproveMedium"
-    nonisolated static let modelKey = "openrouterModel"
     nonisolated static let autoConnectKey = "autoConnect"
     nonisolated static let speakRepliesKey = "speakReplies"
     nonisolated static let knownDevicesKey = "knownFlipperIDs"
@@ -121,8 +119,29 @@ final class AppModel {
         if !enabled { speaker.stop() }
     }
 
-    var currentModel: String {
-        UserDefaults.standard.string(forKey: Self.modelKey).flatMap { $0.isEmpty ? nil : $0 } ?? Self.defaultModel
+    var aiProvider = AIProvider(rawValue: UserDefaults.standard.string(forKey: AISettings.providerKey) ?? "") ?? .openrouter
+    private var aiSettingsRevision = 0
+    var aiSettings: AISettings {
+        _ = aiSettingsRevision
+        return AISettings.load(aiProvider)
+    }
+    var currentModel: String { aiSettings.model }
+    func selectProvider(_ provider: AIProvider) {
+        aiProvider = provider
+        UserDefaults.standard.set(provider.rawValue, forKey: AISettings.providerKey)
+        aiSettingsRevision += 1
+        session = nil
+        retiredSession = nil
+        // An agent preference change finishes the current turn on the old session.
+        if !isBusy { newChat() }
+    }
+    func applyAISettings(_ settings: AISettings) {
+        settings.persist()
+        aiProvider = settings.provider
+        aiSettingsRevision += 1
+        session = nil
+        retiredSession = nil
+        if !isBusy { newChat() }
     }
 
     var settingsSnapshot: AppSettingsSnapshot {
@@ -132,6 +151,7 @@ final class AppModel {
             readAloud: speakReplies,
             autoConnect: UserDefaults.standard.object(forKey: Self.autoConnectKey) as? Bool ?? true,
             model: currentModel, apiKeyStored: hasAPIKey && !isDemo,
+            provider: aiProvider.rawValue, apiBaseURL: aiSettings.baseURL,
             engagementActive: engagement.active,
             engagementSummary: engagement.active ? engagement.profile.summary : "off"
         )
@@ -192,6 +212,7 @@ final class AppModel {
     private(set) var client: FlipperRPCClient?
     private var ble: FlipperBLE?
     private var session: AgentSession?
+    private var sessionAISettings: AISettings?
     private var tasks: [Task<Void, Never>] = []
     private let audit = FileAuditLog(url: URL.applicationSupportDirectory.appending(path: "audit.jsonl"))
     private let profileStore = DeviceProfileStore(
@@ -431,7 +452,10 @@ final class AppModel {
 
     private(set) var isDemo = false
 
-    var hasAPIKey: Bool { isDemo || !(KeychainStore.read("openrouter") ?? "").isEmpty }
+    var hasAPIKey: Bool {
+        _ = aiSettingsRevision
+        return isDemo || !(KeychainStore.read(aiProvider.rawValue) ?? "").isEmpty
+    }
 
     func newChat() {
         denyPendingApproval()
@@ -441,11 +465,11 @@ final class AppModel {
     }
 
     private func ensureSession() async throws -> AgentSession {
-        if let session { return session }
+        if let session, sessionAISettings == aiSettings { return session }
+        let changedProvider = sessionAISettings?.provider != nil && sessionAISettings?.provider != aiProvider
+        if changedProvider { retiredSession = nil }
         guard let client else { throw FlipperError.notConnected }
-        guard let key = KeychainStore.read("openrouter"), !key.isEmpty else {
-            throw LLMError.malformed(String(localized: "Add your OpenRouter API key in Settings first"))
-        }
+        guard let key = KeychainStore.read(aiProvider.rawValue), !key.isEmpty else { throw ProviderError.missingKey }
         let model = currentModel
         let gate = UIApprovalGate { [weak self] request, continuation in
             Task { @MainActor in
@@ -453,7 +477,8 @@ final class AppModel {
                 self.pendingApproval = PendingApproval(request: request, continuation: continuation)
             }
         }
-        let llm = OpenRouterClient(apiKey: key, model: model)
+        guard !model.isEmpty else { throw ProviderError.missingModel }
+        let llm = try aiSettings.api(key: key).client(model: model)
         let executor = makeExecutor(client: client, gate: gate, forge: PayloadForge(llm: llm))
         let carried = await retiredSession?.messages ?? []
         retiredSession = nil
@@ -466,6 +491,7 @@ final class AppModel {
             }
         } }
         session = created
+        sessionAISettings = aiSettings
         return created
     }
 

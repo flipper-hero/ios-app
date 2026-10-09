@@ -39,7 +39,8 @@ speaks the exact RPC this app speaks.
 <td width="50%" valign="top">
 
 ### 💬 Agent chat
-Any model on [OpenRouter](https://openrouter.ai) with tool calling. Files, device info, battery,
+Tool-calling models through OpenRouter, 2342.ai, Blackbit, OrcaRouter, Z.ai, Kimi,
+Qwen Cloud or MiniMax, with a searchable model catalog and connection check. Files, device info, battery,
 renaming, restarting, firmware updates, the official app catalog, remotes from GitHub, generated
 Flipper files, and Sub-GHz, Infrared, NFC, RFID, iButton and Bad KB.
 
@@ -194,7 +195,7 @@ test suite. Corrections from native speakers are very welcome.
 ## Getting started
 
 **You need** Xcode 26 or newer, an iPhone on iOS 17 or newer (Bluetooth does not work in the
-simulator), [XcodeGen](https://github.com/yonaskolb/XcodeGen) and an OpenRouter API key.
+simulator), [XcodeGen](https://github.com/yonaskolb/XcodeGen) and an API key for a supported provider.
 
 ```sh
 git clone https://github.com/flipper-hero/ios-app.git
@@ -208,10 +209,17 @@ Run it on your iPhone, then:
 
 1. Turn on Bluetooth on the Flipper (Settings > Bluetooth).
 2. In the Device tab, pick your Flipper and confirm the PIN on both devices the first time.
-3. Add your OpenRouter key in Settings. It stays in the iOS Keychain on this iPhone.
+3. Choose your provider in Settings and enter its API key. Choose a model from the live
+   catalog or enter its ID. Test and save sends a short prompt before storing the key
+   in the iOS Keychain. Provider usage charges are separate from the app price.
 
-The default model is `anthropic/claude-sonnet-4.5`. Any OpenRouter model with tool calling works;
-vision-capable models can also use the camera and look at the Flipper's screen.
+The default OpenRouter model is `anthropic/claude-sonnet-4.5`. Keys, model IDs and API
+base URLs are remembered separately for every provider. The API base URL field supports
+regional access and coding-plan endpoints on the selected provider's domains. For Qwen
+Cloud, use the URL matching your key's region and workspace from Alibaba Cloud's documentation.
+2342.ai model IDs are selected from its authenticated live catalog. If a provider does
+not expose a model list, enter an ID from its documentation instead. Choose a model
+with tool calling; vision-capable models can also use the camera and look at the Flipper's screen.
 
 ## Development
 
@@ -241,7 +249,7 @@ Add `FH_TAB=0..4`, `FH_DEMO_APPROVAL=1`, `FH_DEMO_YOLO=1`, `FH_DEMO_ACTIVITY=1`,
 ```mermaid
 flowchart LR
     UI["SwiftUI app<br/>Siri · Live Activity"] --> Agent["AgentKit<br/>agent loop · tools · risk · audit"]
-    Agent <--> LLM["OpenRouter"]
+    Agent <--> LLM["Selected AI provider"]
     Agent --> Kit["FlipperKit<br/>RPC client · device API"]
     UI --> Kit
     Kit <-->|"Bluetooth LE<br/>protobuf RPC"| Flipper["Flipper Zero"]
@@ -251,7 +259,7 @@ flowchart LR
 |---|---|
 | `Sources/FlipperProto` | Generated protobuf types for the Flipper RPC (`scripts/gen-proto.sh`) |
 | `Sources/FlipperKit` | Framing, RPC client, device API, CoreBluetooth transport |
-| `Sources/AgentKit` | Tools, risk model, approvals, executor, agent loop, OpenRouter, catalogs |
+| `Sources/AgentKit` | Tools, risk model, approvals, executor, agent loop, provider APIs, catalogs |
 | `App` | SwiftUI app, Siri and Shortcuts; `project.yml` generates the Xcode project |
 | `Widgets` | Widget extension with the Live Activity |
 | `Shared` | Live Activity types and intents compiled into both the app and the extension |

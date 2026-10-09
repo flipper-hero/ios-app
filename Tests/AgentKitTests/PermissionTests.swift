@@ -13,6 +13,13 @@ actor FakeAppControls: AppControls {
     func setYoloAsksAfterReading(_ enabled: Bool) { state.yoloAsksAfterReading = enabled }
     func setAutoApproveMedium(_ enabled: Bool) { state.autoApproveMedium = enabled }
     func setModel(_ model: String) { state.model = model }
+    func setProvider(_ provider: AIProvider, baseURL: String?) {
+        state.provider = provider.rawValue
+        state.apiBaseURL = baseURL ?? provider.baseURL
+    }
+    func listModels() -> [AIModel] { [AIModel(id: "m/x", name: "Test model")] }
+    private(set) var connectionTests = 0
+    func testConnection() { connectionTests += 1 }
     private(set) var engagement = EngagementState.inactive
     func setEngagement(_ state: EngagementState) {
         engagement = state
@@ -146,6 +153,23 @@ final class PermissionTests: XCTestCase {
     func testModelIdIsValidated() {
         XCTAssertNotNil(try? ToolInvocation(name: "set_model", arguments: #"{"model":"anthropic/claude-sonnet-4.5"}"#))
         XCTAssertNil(try? ToolInvocation(name: "set_model", arguments: #"{"model":"x; rm -rf"}"#))
+    }
+
+    func testProviderCatalogAndProbeHaveToolsWithoutExposingCredentials() async throws {
+        let (ex, controls, gate) = make(approve: true)
+        let changed = await ex.execute(ToolCall(id: "1", name: "set_ai_provider", arguments: #"{"provider":"kimi"}"#))
+        XCTAssertFalse(changed.isError)
+        let state = await controls.settings()
+        XCTAssertEqual(state.provider, "kimi")
+        let catalog = await ex.execute(ToolCall(id: "2", name: "list_models", arguments: "{}"))
+        XCTAssertTrue(catalog.content.contains("m/x"))
+        XCTAssertTrue(catalog.content.contains("<<<FLIPPER_DATA"))
+        let tested = await ex.execute(ToolCall(id: "3", name: "test_model_connection", arguments: "{}"))
+        XCTAssertFalse(tested.isError)
+        let count = await controls.connectionTests
+        XCTAssertEqual(count, 1)
+        XCTAssertEqual(gate.requests.count, 2, "provider changes and a paid test ask, catalog reads do not")
+        XCTAssertThrowsError(try ToolInvocation(name: "set_ai_provider", arguments: #"{"provider":"kimi","base_url":"https://example.com/v1"}"#))
     }
 
     func testDeviceInfoMentionsPendingRename() async throws {

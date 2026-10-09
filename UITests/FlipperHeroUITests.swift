@@ -80,6 +80,23 @@ final class FlipperHeroUITests: XCTestCase {
         XCTAssertTrue(text(app, containing: "/ext/backup").exists)
     }
 
+    func testAISettingsShowProvidersAndSearchableModelSelector() {
+        let app = launch(tab: 4)
+        let provider = app.buttons["aiProviderPicker"]
+        XCTAssertTrue(provider.waitForExistence(timeout: 5))
+        provider.tap()
+        for name in ["OpenRouter", "2342.ai", "Blackbit", "OrcaRouter", "Z.ai", "Kimi", "Qwen Cloud", "MiniMax"] {
+            XCTAssertTrue(app.buttons[name].exists || text(app, containing: name).exists, name)
+        }
+        app.buttons["OpenRouter"].firstMatch.tap()
+        app.buttons["aiModelSelector"].tap()
+        XCTAssertTrue(app.searchFields.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(text(app, containing: "anthropic/claude-sonnet-4.5").exists)
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(app.secureTextFields["aiAPIKey"].exists)
+        XCTAssertTrue(app.buttons["aiTestAndSave"].exists)
+    }
+
     func testYoloNeedsConfirmationAndShowsTheBadge() {
         let app = launch(tab: 4)
         let toggle = app.switches["YOLO mode"]

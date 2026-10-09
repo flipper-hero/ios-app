@@ -26,8 +26,12 @@ enum KeychainStore {
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
         ]
-        SecItemDelete(base as CFDictionary)
-        guard !value.isEmpty else { return errSecSuccess }
+        guard !value.isEmpty else {
+            let status = SecItemDelete(base as CFDictionary)
+            return status == errSecItemNotFound ? errSecSuccess : status
+        }
+        let update = SecItemUpdate(base as CFDictionary, [kSecValueData as String: Data(value.utf8)] as CFDictionary)
+        guard update == errSecItemNotFound else { return update }
         var add = base
         add[kSecValueData as String] = Data(value.utf8)
         // Readable after the first unlock so a relaunch while the phone is locked does not lose the key.

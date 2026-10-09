@@ -4,57 +4,16 @@ import AgentKit
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
     @AppStorage(AppModel.autoApproveKey) private var autoApproveMedium = false
-    @AppStorage(AppModel.modelKey) private var modelName = AppModel.defaultModel
-    @State private var keyInput = ""
-    @State private var keyStored = false
     @State private var confirmYolo = false
 #if !FLIPPERHERO_STORE
     @State private var showArmSheet = false
 #endif
     @AppStorage(AppModel.autoConnectKey) private var autoConnect = true
-    @State private var saveError: String?
 
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    SecureField(keyStored ? "Key stored (enter a new one to replace)" : "sk-or-...", text: $keyInput)
-                        .textContentType(.password)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                    Button("Save key") {
-                        let trimmed = keyInput.trimmingCharacters(in: .whitespacesAndNewlines)
-                        guard trimmed.count >= 30 else {
-                            saveError = String(localized: "That is only \(trimmed.count) characters. An OpenRouter key (sk-or-v1-...) is much longer. The paste may have been cut off.")
-                            return
-                        }
-                        let status = KeychainStore.write(trimmed, account: "openrouter")
-                        keyStored = model.hasAPIKey
-                        if status == errSecSuccess && keyStored {
-                            saveError = nil
-                            keyInput = ""
-                            model.newChat()
-                        } else {
-                            saveError = String(localized: "Could not save the key (Keychain status \(status)). It is still in the field, nothing was lost.")
-                        }
-                    }.disabled(keyInput.isEmpty)
-                    if let saveError {
-                        Text(saveError).font(.footnote).foregroundStyle(Theme.danger)
-                    }
-                    if keyStored {
-                        LabeledContent("Stored key", value: model.isDemo ? "sk-or-v1...  (demo)" : Self.keySummary())
-                        Button("Remove key", role: .destructive) {
-                            KeychainStore.write("", account: "openrouter")
-                            keyStored = false
-                            model.newChat()
-                        }
-                    }
-                    TextField("Model", text: $modelName)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                } header: { Text("OpenRouter") } footer: {
-                    Text("The key stays in the iOS Keychain on this iPhone. Your messages and the file contents the agent reads are sent to the model provider.")
-                }
+                AISettingsSection()
 
                 Section {
                     Toggle("Skip prompts for medium-risk actions", isOn: $autoApproveMedium)
@@ -111,7 +70,6 @@ struct SettingsView: View {
             }
             .themedList()
             .brandedNavigation("Settings")
-            .onAppear { keyStored = model.hasAPIKey }
 #if !FLIPPERHERO_STORE
             .sheet(isPresented: $showArmSheet) { EngagementArmSheet() }
 #endif
@@ -174,14 +132,6 @@ struct EngagementArmSheet: View {
     }
 }
 #endif
-
-extension SettingsView {
-    /// Shows only the prefix and length, never the key itself.
-    static func keySummary() -> String {
-        guard let key = KeychainStore.read("openrouter") else { return "none" }
-        return "\(key.prefix(6))...  (\(key.count) characters)"
-    }
-}
 
 struct AuditView: View {
     @Environment(AppModel.self) private var model

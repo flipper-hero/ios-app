@@ -60,7 +60,7 @@ struct ChatView: View {
     }
 
     private var notice: some View {
-        Label(!model.isConnected ? String(localized: "Connect to a Flipper first (Device tab)") : String(localized: "Add your OpenRouter key in Settings"),
+        Label(!model.isConnected ? String(localized: "Connect to a Flipper first (Device tab)") : String(localized: "Add your API key in Settings"),
               systemImage: "exclamationmark.circle")
             .font(.footnote.weight(.medium))
             .foregroundStyle(Theme.orange)

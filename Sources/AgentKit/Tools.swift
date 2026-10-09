@@ -49,6 +49,9 @@ public enum ToolInvocation: Sendable, Equatable {
     case setYoloAsksAfterReading(Bool)
     case setAutoApproveMedium(Bool)
     case setModel(String)
+    case setProvider(AIProvider, baseURL: String?)
+    case listModels
+    case testConnection
     case lookAtScreen
     case installFirmwareUpdate
     case firmwareUpdateStatus
@@ -101,6 +104,9 @@ public enum ToolInvocation: Sendable, Equatable {
         case .setYoloAsksAfterReading: "set_yolo_asks_after_reading"
         case .setAutoApproveMedium: "set_auto_approve_medium"
         case .setModel: "set_model"
+        case .setProvider: "set_ai_provider"
+        case .listModels: "list_models"
+        case .testConnection: "test_model_connection"
         case .lookAtScreen: "look_at_screen"
         case .installFirmwareUpdate: "install_firmware_update"
         case .firmwareUpdateStatus: "firmware_update_status"
@@ -168,6 +174,9 @@ public enum ToolInvocation: Sendable, Equatable {
         case .setYoloAsksAfterReading(let on): on ? L("Ask again after reading Flipper content, even in YOLO mode") : L("Stop asking after reading Flipper content in YOLO mode")
         case .setAutoApproveMedium(let on): on ? L("Skip prompts for medium-risk actions") : L("Ask again for medium-risk actions")
         case .setModel(let m): L("Switch the model to \(m)")
+        case .setProvider(let provider, _): L("Switch the AI provider to \(provider.name)")
+        case .listModels: L("Choose model")
+        case .testConnection: L("Test connection")
         case .lookAtScreen: L("Look at the Flipper's screen")
         case .installFirmwareUpdate: L("Download and install the newest firmware release on the Flipper")
         case .firmwareUpdateStatus: L("Check how the firmware update is going")
@@ -311,6 +320,15 @@ public enum ToolInvocation: Sendable, Equatable {
                 throw ToolError.badArguments("invalid model id")
             }
             self = .setModel(model)
+        case "set_ai_provider":
+            guard let provider = AIProvider(rawValue: try string("provider")) else {
+                throw ToolError.badArguments("unknown AI provider")
+            }
+            let baseURL = args["base_url"]?.stringValue
+            if let baseURL { _ = try provider.validatedBaseURL(baseURL) }
+            self = .setProvider(provider, baseURL: baseURL)
+        case "list_models": self = .listModels
+        case "test_model_connection": self = .testConnection
         case "download_resource":
             self = .downloadResource(url: try string("url"), path: try string("path"))
         case "forge_payload":
@@ -486,8 +504,14 @@ public enum ToolCatalog {
                  parameters: object(["enabled": ("boolean", "true to keep asking after reading device content")], required: ["enabled"])),
         ToolSpec(name: "set_auto_approve_medium", description: "Skip prompts for medium-risk actions. Turning it on always needs the user's permission.",
                  parameters: object(["enabled": ("boolean", "true to skip medium-risk prompts")], required: ["enabled"])),
-        ToolSpec(name: "set_model", description: "Switch the OpenRouter model used for the next chat, e.g. anthropic/claude-sonnet-4.5.",
-                 parameters: object(["model": ("string", "OpenRouter model id")], required: ["model"])),
+        ToolSpec(name: "set_model", description: "Switch the model used for the next chat. Use an ID from list_models or provider documentation.",
+                 parameters: object(["model": ("string", "Provider model ID")], required: ["model"])),
+        ToolSpec(name: "set_ai_provider", description: "Select the AI provider for the next chat: openrouter, ai2342, blackbit, orcarouter, zai, kimi, qwen, minimax. Restores its saved model and key. Optional base_url must be an HTTPS API base on that provider's own domain, for regional or coding-plan access. Never reads or writes keys.",
+                 parameters: object(["provider": ("string", "Provider ID"), "base_url": ("string", "Optional regional API base URL")], required: ["provider"])),
+        ToolSpec(name: "list_models", description: "Fetch the selected provider's model catalog using its stored key. Credentials are never returned.",
+                 parameters: object([:], required: [])),
+        ToolSpec(name: "test_model_connection", description: "Send a tiny fixed OK prompt to the selected model using the stored key. May incur provider charges. Sends no conversation or device data.",
+                 parameters: object([:], required: [])),
         ToolSpec(name: "install_firmware_update", description: "Download the newest release of the installed firmware distribution and install it over Bluetooth. Runs in the background for 15 to 25 minutes; the Flipper restarts at the end. Check check_firmware first and tell the user what will be installed.",
                  parameters: object([:], required: [])),
         ToolSpec(name: "firmware_update_status", description: "Progress of a running firmware update, or the result of the last one.",

@@ -9,11 +9,14 @@ public struct AppSettingsSnapshot: Sendable, Equatable {
     public var autoConnect: Bool
     public var model: String
     public var apiKeyStored: Bool
+    public var provider: String
+    public var apiBaseURL: String
     public var engagementActive: Bool
     public var engagementSummary: String
 
     public init(yolo: Bool, yoloAsksAfterReading: Bool, autoApproveMedium: Bool, readAloud: Bool,
                 autoConnect: Bool, model: String, apiKeyStored: Bool,
+                provider: String = "openrouter", apiBaseURL: String = "https://openrouter.ai/api/v1",
                 engagementActive: Bool = false, engagementSummary: String = "off") {
         self.yolo = yolo
         self.yoloAsksAfterReading = yoloAsksAfterReading
@@ -22,6 +25,8 @@ public struct AppSettingsSnapshot: Sendable, Equatable {
         self.autoConnect = autoConnect
         self.model = model
         self.apiKeyStored = apiKeyStored
+        self.provider = provider
+        self.apiBaseURL = apiBaseURL
         self.engagementActive = engagementActive
         self.engagementSummary = engagementSummary
     }
@@ -38,6 +43,9 @@ public protocol AppControls: Sendable {
     func setYoloAsksAfterReading(_ enabled: Bool) async
     func setAutoApproveMedium(_ enabled: Bool) async
     func setModel(_ model: String) async
+    func setProvider(_ provider: AIProvider, baseURL: String?) async throws
+    func listModels() async throws -> [AIModel]
+    func testConnection() async throws
     /// Arms or disarms engagement mode. Arming only ever arrives here after the executor
     /// obtained explicit consent from the operator; implementations apply it without asking again.
     func setEngagement(_ state: EngagementState) async

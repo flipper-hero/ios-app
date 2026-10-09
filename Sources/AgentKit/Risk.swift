@@ -67,14 +67,16 @@ public enum RiskAssessor {
             return .init(level: .low, reasons: [L("takes a screenshot of the Flipper")])
         case .pressButtons:
             return .init(level: .high, reasons: [L("presses buttons in whatever app is open, which can start transmissions or delete data")])
-        case .checkFirmware, .getAuditLog, .getAppSettings:
+        case .checkFirmware, .getAuditLog, .getAppSettings, .listModels:
             return .init(level: .low, reasons: [L("read-only")])
         case .setReadAloud, .setAutoConnect:
             return .init(level: .low, reasons: [L("changes a harmless app preference")])
         case .restartDevice:
             return .init(level: .medium, reasons: [L("restarts the Flipper; whatever runs on it stops and the connection drops briefly")])
-        case .setModel:
+        case .setModel, .setProvider:
             return .init(level: .medium, reasons: [L("changes which model provider receives your conversation and file contents")])
+        case .testConnection:
+            return .init(level: .medium, reasons: [L("sends a paid test message to your model provider")])
         case .setYoloMode(let on):
             return on ? .init(level: .high, reasons: [L("the agent could then change, delete and transmit without asking you")])
                       : .init(level: .low, reasons: [L("makes the agent ask again")])
