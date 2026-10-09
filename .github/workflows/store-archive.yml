@@ -1,0 +1,32 @@
+name: Store archive
+
+on:
+  workflow_dispatch:
+
+jobs:
+  archive:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Build unsigned Store archive with public Xcode
+        run: |
+          DEVELOPER_DIR="$(xcode-select -p)" scripts/build-store.sh archive APP_BUNDLE_ID=io.anycast.flipperhero
+          python3 - <<'PY'
+          import subprocess
+          binary = 'build/FlipperHero-Store.xcarchive/Products/Applications/FlipperHero.app/FlipperHero'
+          strings = subprocess.check_output(['strings', binary], text=True)
+          blocked = ['badusb_execute', 'rpc_raw', 'set_engagement_mode', 'generate_engagement_report']
+          assert not any(tool in strings for tool in blocked), 'Store archive contains excluded capabilities'
+          PY
+          ditto -c -k --keepParent build/FlipperHero-Store.xcarchive build/FlipperHero-Store.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FlipperHero-Store
+          path: build/FlipperHero-Store.zip
+          if-no-files-found: error
+          retention-days: 3
