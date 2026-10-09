@@ -27,6 +27,11 @@ action that matters waits for your approval. The rules for that live in code, no
 Everything the interface can do, the agent can do too. Everything the agent does is shown, checked
 and logged.
 
+Prefer your terminal? The companion [**flipper CLI**](https://github.com/flipper-hero/cli) drives
+the same device over USB and Bluetooth on macOS, Linux, Windows and FreeBSD — human-readable by
+default, one JSON document with `--json`, and built so your local AI agents can use it too. It
+speaks the exact RPC this app speaks.
+
 ## Features
 
 <table>
