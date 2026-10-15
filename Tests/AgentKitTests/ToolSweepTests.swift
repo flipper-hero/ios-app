@@ -50,6 +50,7 @@ final class ToolSweepTests: XCTestCase {
         ("cancel_firmware_update", "{}"),
         ("look_at_screen", "{}"),
         ("press_buttons", #"{"keys":["down","ok","long_back"],"look_after":false}"#),
+        ("marauder", #"{"action":"list_ap"}"#),
         ("set_engagement_mode", #"{"enabled":true,"raw_rpc":true,"auto_badusb":true,"note":"sweep"}"#),
         ("generate_engagement_report", "{}"),
         ("gpio", #"{"action":"configure","pin":"pb3","direction":"input","pull":"up"}"#),

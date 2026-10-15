@@ -26,11 +26,14 @@ public actor FlipperRPCClient {
     private var waiters: [CheckedContinuation<Void, Never>] = []
     /// Subscribers for messages the Flipper sends on its own (screen frames use command id 0).
     private var unsolicitedSubscribers: [UUID: AsyncStream<PB_Main>.Continuation] = [:]
+#if !FLIPPERHERO_STORE
+    var marauderSessionActive = false
+#endif
 
     /// Messages that do not answer a pending request. Each call returns an independent stream.
-    public func unsolicitedMessages() -> AsyncStream<PB_Main> {
+    public func unsolicitedMessages(bufferLimit: Int = 4) -> AsyncStream<PB_Main> {
         let id = UUID()
-        let (stream, continuation) = AsyncStream<PB_Main>.makeStream(bufferingPolicy: .bufferingNewest(4))
+        let (stream, continuation) = AsyncStream<PB_Main>.makeStream(bufferingPolicy: .bufferingNewest(bufferLimit))
         unsolicitedSubscribers[id] = continuation
         continuation.onTermination = { [weak self] _ in
             Task { await self?.removeSubscriber(id) }

@@ -50,8 +50,8 @@ Siri and Shortcuts run every action that changes something through `AppModel.run
 builds a `ToolExecutor` with the normal policy. Only plain reads like the battery may go to the
 device directly; anything else would skip the risk check and the audit log.
 
-Tools without a UI counterpart (transmit, emulate, Bad KB, payload generation, FapHub, GitHub) are
-fine; parity only has to hold in the UI-to-agent direction.
+Tools without a UI counterpart (transmit, emulate, Bad KB, payload generation, FapHub, GitHub,
+Marauder bridge in the OSS edition) are fine; parity only has to hold in the UI-to-agent direction.
 
 ## Safety rules that are not negotiable
 
@@ -64,6 +64,8 @@ fine; parity only has to hold in the UI-to-agent direction.
   guards, and only through `rpc_raw`, which the operator arms in a dialog of its own.
 - No general raw CLI tool. The one escape hatch is `rpc_raw`, gated behind an explicit
   engagement-mode capability, so the risk model is bypassed only when the operator says so.
+- Marauder commands go through the fixed allowlist in the separate bridge FAP.
+  Every radio attack asks for per-action approval even with YOLO or engagement mode.
 - What the user approves is exactly what gets executed: generated payloads and downloads are
   prepared during approval and reused, never generated or fetched a second time.
 
@@ -92,7 +94,8 @@ There are two editions of the same sources, split at compile time by `FLIPPERHER
 - **Store edition** (`DebugStore`, `ReleaseStore`, the `FlipperHeroStore` scheme): compiles the
   red team capabilities out entirely. Stripped: `badusb_execute`, `rpc_raw`, `gpio`,
   `set_engagement_mode`, `generate_engagement_report`, the badusb kind of `forge_payload`, the
-  engagement UI (arm sheet, banner, Live Activity, disarm intent) and the operator persona in
+  engagement UI (arm sheet, banner, Live Activity, disarm intent), the Marauder
+  bridge and the operator persona in
   `AgentPrompts` (the store prompt is the neutral assistant). What remains is in line with what
   the official Flipper app already offers on the App Store.
 

@@ -2,7 +2,7 @@
 # Builds the App Store edition of FlipperHero.
 #
 # The FLIPPERHERO_STORE compilation condition strips the red team capabilities
-# (badusb_execute, rpc_raw, gpio, engagement mode, the report tool and the
+# (badusb_execute, rpc_raw, gpio, marauder, engagement mode, the report tool and the
 # operator persona) from every target, including the SwiftPM packages. The only
 # way the flag reaches the packages is this command-line override, so never
 # archive the App Store build from Xcode directly: it would silently be the

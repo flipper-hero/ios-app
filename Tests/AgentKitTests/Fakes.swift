@@ -74,6 +74,10 @@ actor FakeFlipper: FlipperControlling {
     func emulate(_ app: FlipperApp, path: String) async throws { calls.append("emulate \(app.rawValue) \(path)") }
     func loadBadKeyboardScript(path: String) async throws { calls.append("badusb \(path)") }
     func exitApp() async throws { calls.append("exitApp") }
+    func marauder(_ operation: MarauderOperation) async throws -> String {
+        calls.append("marauder \(operation.auditName)")
+        return "[0][CH:6] Lab Wi-Fi"
+    }
     func playAlert() async throws { calls.append("alert") }
     private(set) var pendingName: String?
     func setDeviceName(_ name: String) async throws { calls.append("setName \(name)"); pendingName = name }

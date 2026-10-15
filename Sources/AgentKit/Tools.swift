@@ -58,6 +58,7 @@ public enum ToolInvocation: Sendable, Equatable {
     case cancelFirmwareUpdate
     case pressButtons([ButtonStep], lookAfter: Bool)
 #if !FLIPPERHERO_STORE
+    case marauder(MarauderOperation)
     case badUsbExecute(path: String)
     case gpioConfigure(pin: FlipperGPIOPin, output: Bool, pullUp: Bool?)
     case gpioRead(pin: FlipperGPIOPin)
@@ -113,6 +114,7 @@ public enum ToolInvocation: Sendable, Equatable {
         case .cancelFirmwareUpdate: "cancel_firmware_update"
         case .pressButtons: "press_buttons"
 #if !FLIPPERHERO_STORE
+        case .marauder: "marauder"
         case .badUsbExecute: "badusb_execute"
         case .gpioConfigure, .gpioRead, .gpioWrite: "gpio"
         case .rawRPC: "rpc_raw"
@@ -183,6 +185,7 @@ public enum ToolInvocation: Sendable, Equatable {
         case .cancelFirmwareUpdate: L("Cancel the running firmware update")
         case .pressButtons(let keys, _): Self.pressSummary(keys)
 #if !FLIPPERHERO_STORE
+        case .marauder(let operation): L("Run Marauder operation \(operation.auditName)")
         case .badUsbExecute(let p): L("Start the Bad KB script \(p) on the Flipper now")
         case .gpioConfigure(let pin, let output, _):
             output ? L("Set GPIO pin \(pin.rawValue) to output") : L("Set GPIO pin \(pin.rawValue) to input")
@@ -227,6 +230,13 @@ public enum ToolInvocation: Sendable, Equatable {
 #endif
         default: false
         }
+    }
+
+    public var requiresPerActionApproval: Bool {
+#if !FLIPPERHERO_STORE
+        if case .marauder(.attack) = self { return true }
+#endif
+        return false
     }
 
     public init(name: String, arguments: String) throws {
@@ -347,6 +357,54 @@ public enum ToolInvocation: Sendable, Equatable {
             if !target.lowercased().hasSuffix("." + kind.fileExtension) { target += "." + kind.fileExtension }
             self = .forgePayload(kind: kind, description: desc, path: target)
 #if !FLIPPERHERO_STORE
+        case "marauder":
+            let action = try string("action")
+            func seconds(_ fallback: Int, max: Int) throws -> Int {
+                guard let supplied = args["seconds"] else { return fallback }
+                guard case .number(let raw) = supplied, raw.isFinite, raw.rounded() == raw else {
+                    throw ToolError.badArguments("seconds must be an integer")
+                }
+                guard raw >= 1, raw <= Double(max) else {
+                    throw ToolError.badArguments("seconds must be 1 to \(max)")
+                }
+                return Int(raw)
+            }
+            switch action {
+            case "commands": self = .marauder(.commands)
+            case "list_ap": self = .marauder(.accessPoints)
+            case "list_stations": self = .marauder(.stations)
+            case "list_ssids": self = .marauder(.ssids)
+            case "scan_ap": self = .marauder(.scanAccessPoints(seconds: try seconds(5, max: 30)))
+            case "scan_stations": self = .marauder(.scanStations(seconds: try seconds(5, max: 30)))
+            case "sniff":
+                guard let mode = MarauderMode(rawValue: try string("mode")) else {
+                    throw ToolError.badArguments("mode must be beacon, probe, deauth or pmkid")
+                }
+                self = .marauder(.sniff(mode, seconds: try seconds(5, max: 30)))
+            case "attack":
+                guard let mode = MarauderAttack(rawValue: try string("mode")) else {
+                    throw ToolError.badArguments("mode must be deauth, probe, beacon or rickroll")
+                }
+                let index: Int?
+                let indexKey = mode == .probe ? "ssid_index" : "ap_index"
+                if case .number(let raw)? = args[indexKey], raw.isFinite,
+                   raw.rounded() == raw, raw >= 0, raw <= 99 { index = Int(raw) }
+                else if args[indexKey] == nil { index = nil }
+                else { throw ToolError.badArguments("index must be an integer from 0 to 99") }
+                if mode == .deauth && !(index.map { (0...99).contains($0) } ?? false) {
+                    throw ToolError.badArguments("deauth needs one ap_index from 0 to 99")
+                }
+                if mode == .probe && index == nil { throw ToolError.badArguments("probe needs one ssid_index from 0 to 99") }
+                if (mode != .deauth && args["ap_index"] != nil) ||
+                    (mode != .probe && args["ssid_index"] != nil) {
+                    throw ToolError.badArguments("index does not match attack mode")
+                }
+                if mode != .deauth && mode != .probe && index != nil {
+                    throw ToolError.badArguments("index is only for deauth or probe")
+                }
+                self = .marauder(.attack(mode, targetIndex: index, seconds: try seconds(3, max: 10)))
+            default: throw ToolError.badArguments("unknown Marauder action")
+            }
         case "badusb_execute": self = .badUsbExecute(path: try string("path"))
         case "gpio":
             func pin() throws -> FlipperGPIOPin {
@@ -536,6 +594,12 @@ public enum ToolCatalog {
         ]
         #if !FLIPPERHERO_STORE
         specs += [
+        ToolSpec(name: "marauder",
+                 description: "Use an attached Marauder Wi-Fi board via the installed Marauder Bridge FAP. Actions: commands, list_ap, list_stations, list_ssids, scan_ap, scan_stations, sniff, attack. Sniff modes: beacon, probe, deauth, pmkid. Attack modes: deauth (one ap_index from list_ap), probe (one ssid_index from list_ssids), beacon (random), rickroll. Radio tests stop after 1 to 10 seconds. Only transmit for an authorized test.",
+                 parameters: object(["action": ("string", "Marauder action"), "mode": ("string", "Required for sniff and attack"),
+                                     "seconds": ("integer", "Duration, 1 to 30 for scan/sniff, 1 to 10 for attack"),
+                                     "ap_index": ("integer", "One AP index, required for deauth"),
+                                     "ssid_index": ("integer", "One SSID index, required for probe")], required: ["action"])),
         ToolSpec(name: "badusb_execute",
                  description: "Start a Bad KB script immediately, without anyone pressing Run on the Flipper. Only available after the operator armed engagement mode with auto_badusb; ask them to arm it first. Keystrokes go to whatever machine the Flipper is plugged into.",
                  parameters: object(["path": ("string", "Absolute path to a .txt script, e.g. from forge_payload or write_file")], required: ["path"])),

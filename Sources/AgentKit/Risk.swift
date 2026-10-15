@@ -109,6 +109,17 @@ public enum RiskAssessor {
             }
             return .init(level: .high, reasons: [recursive ? L("deletes a folder and its contents") : L("deletes data")])
 #if !FLIPPERHERO_STORE
+        case .marauder(let operation):
+            switch operation {
+            case .commands, .accessPoints, .stations, .ssids:
+                return .init(level: .low, reasons: [L("read-only")])
+            case .scanAccessPoints, .scanStations:
+                return .init(level: .medium, reasons: [L("starts a Wi-Fi scan")])
+            case .sniff:
+                return .init(level: .medium, reasons: [L("captures nearby Wi-Fi traffic")])
+            case .attack:
+                return .init(level: .high, reasons: [L("transmits a radio signal")])
+            }
         case .badUsbExecute(let p):
             return physical(p, L("types a keystroke-injection script into the connected machine on its own"))
         case .gpioConfigure(let pin, let output, _):

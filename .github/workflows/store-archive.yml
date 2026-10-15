@@ -20,7 +20,7 @@ jobs:
           import subprocess
           binary = 'build/FlipperHero-Store.xcarchive/Products/Applications/FlipperHero.app/FlipperHero'
           strings = subprocess.check_output(['strings', binary], text=True)
-          blocked = ['badusb_execute', 'rpc_raw', 'set_engagement_mode', 'generate_engagement_report']
+          blocked = ['badusb_execute', 'rpc_raw', 'marauder_bridge', 'set_engagement_mode', 'generate_engagement_report']
           assert not any(tool in strings for tool in blocked), 'Store archive contains excluded capabilities'
           PY
           ditto -c -k --keepParent build/FlipperHero-Store.xcarchive build/FlipperHero-Store.zip

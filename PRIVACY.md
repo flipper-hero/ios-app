@@ -1,6 +1,6 @@
 # FlipperHero Privacy Policy / Datenschutzerklärung
 
-Last updated / Stand: 9 October 2026
+Last updated / Stand: 15 October 2026
 
 ## English
 
@@ -26,8 +26,10 @@ credits. Choose OpenRouter, 2342.ai, Blackbit, OrcaRouter, Z.ai, Kimi, Qwen Clou
 or MiniMax in Settings. Requests go directly from your iPhone to the selected service over HTTPS,
 authenticated with your key. Requests include the conversation, any attached
 photos, device inventory information, and results of agent actions, which may
-include file names, file contents and Flipper screen images. Routing services may forward
-requests to the selected model provider. These services can associate requests
+include file names, file contents and Flipper screen images. In the open-source
+edition, Marauder tool results may also include nearby Wi-Fi names and device
+addresses. Routing services may forward requests to the selected model provider.
+These services can associate requests
 with your provider account and receive network information such as your IP
 address. No separate copy is sent to a FlipperHero backend.
 
@@ -93,8 +95,10 @@ gegebenenfalls Guthaben beim Anbieter. In den Einstellungen kannst du OpenRouter
 Anfragen gehen per HTTPS direkt von deinem iPhone an den gewählten Dienst und werden mit deinem Schlüssel authentifiziert. Sie
 enthalten den Gesprächsverlauf, angehängte Fotos, Geräteinventar und Ergebnisse
 der Agent-Aktionen. Dazu können Dateinamen, Dateiinhalte und Bildschirmbilder des
-Flippers gehören. Routing-Dienste können die Anfragen an den gewählten Modellanbieter
-weiterleiten. Diese Dienste können Anfragen deinem Anbieterkonto zuordnen und
+Flippers gehören. In der Open-Source-Version können Ergebnisse des Marauder-Tools
+auch WLAN-Namen und Geräteadressen aus der Umgebung enthalten. Routing-Dienste
+können die Anfragen an den gewählten Modellanbieter weiterleiten. Diese Dienste
+können Anfragen deinem Anbieterkonto zuordnen und
 erhalten Netzwerkdaten wie deine IP-Adresse. Eine zusätzliche Kopie wird nicht
 an ein FlipperHero-Backend gesendet.
 

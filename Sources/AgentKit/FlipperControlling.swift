@@ -24,6 +24,7 @@ public protocol FlipperControlling: Sendable {
     func captureScreen(timeout: Duration) async throws -> FlipperScreenFrame
     func press(_ key: FlipperKey, long: Bool) async throws
 #if !FLIPPERHERO_STORE
+    func marauder(_ operation: MarauderOperation) async throws -> String
     func gpioSetMode(pin: FlipperGPIOPin, output: Bool, pullUp: Bool?) async throws
     func gpioRead(pin: FlipperGPIOPin) async throws -> Bool
     func gpioWrite(pin: FlipperGPIOPin, level: Bool) async throws

@@ -124,7 +124,8 @@ public actor ToolExecutor {
 
         var decision = AuditRecord.Decision.auto
         let consent = invocation.requiresExplicitConsent
-        if consent || ApprovalPolicy.requiresApproval(assessment, settings: current, tainted: tainted) {
+        if consent || invocation.requiresPerActionApproval ||
+            ApprovalPolicy.requiresApproval(assessment, settings: current, tainted: tainted) {
             let request = ApprovalRequest(
                 tool: invocation.toolName, summary: invocation.summary, risk: assessment.level,
                 reasons: assessment.reasons, diff: await previewDiff(invocation), afterUntrustedContent: tainted,
@@ -249,6 +250,14 @@ public actor ToolExecutor {
         case .loadBadKeyboardScript(let path):
             try await flipper.loadBadKeyboardScript(path: path)
             return "Bad KB is open with \(path) loaded. Press Run on the Flipper to execute it."
+
+#if !FLIPPERHERO_STORE
+        case .marauder(let operation):
+            let output = try await flipper.marauder(operation)
+            tainted = true
+            return Untrusted.wrap(output.isEmpty ? "(no response)" : output,
+                                  source: "Marauder Wi-Fi module", nonce: nonce)
+#endif
 
         case .stopApp:
             try await flipper.exitApp()

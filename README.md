@@ -147,6 +147,16 @@ closed-loop, by looking at the screen and pressing its buttons, edit `.sub`/`.ir
 script files directly, drive the **GPIO pins** on the expansion header, and pull files from GitHub
 or the app catalog.
 
+With a Marauder board on the GPIO header, the open-source edition can use the
+`marauder` agent tool for access-point and station scans, bounded sniffer runs,
+and short deauth, probe, beacon or Rickroll radio tests. Deauth requires one AP
+index and probe requires one SSID index from the Marauder lists. Every
+transmitting test asks for approval, even in YOLO or engagement mode. Install
+the allowlisted `marauder_bridge.fap` from the
+[CLI repository](https://github.com/flipper-hero/cli/tree/main/firmware/marauder_bridge)
+at `/ext/apps/GPIO/marauder_bridge.fap` on the Flipper first. Only test networks
+and devices you are authorized to use.
+
 What stays, in every mode:
 
 - Only you can arm engagement mode. The agent can request it; the hold-to-arm dialog is yours.
@@ -159,14 +169,14 @@ What stays, in every mode:
 
 **Two editions.** This repository is the full edition. The App Store edition is built from the
 same sources with `FLIPPERHERO_STORE`, which compiles the red team capabilities out entirely:
-no Bad KB auto-run, no raw device commands, no GPIO, no engagement mode, and a neutral assistant
+no Bad KB auto-run, no raw device commands, no GPIO, no Marauder bridge, no engagement mode, and a neutral assistant
 prompt. Nothing is hidden behind a switch in the store binary; the capabilities are not in it.
 Build it with `scripts/build-store.sh`, see [AGENTS.md](AGENTS.md).
 
 ### Roadmap
 
-- [ ] **Wi-Fi Marauder**: drive a Marauder companion app on a GPIO Wi-Fi dev board for passive
-  wireless recon, through the same closed-loop app control. Waiting for the dev board.
+- [x] **Wi-Fi Marauder PoC**: RPC-to-UART bridge and bounded agent tools in the
+  open-source edition. The attached board has been verified with the Rust CLI.
 
 
 ## Siri and Shortcuts
