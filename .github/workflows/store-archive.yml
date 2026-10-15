@@ -30,3 +30,60 @@ jobs:
           path: build/FlipperHero-Store.zip
           if-no-files-found: error
           retention-days: 3
+      - name: Export signed App Store IPA
+        env:
+          STORE_CERT_P12_BASE64: ${{ secrets.STORE_CERT_P12_BASE64 }}
+          STORE_CERT_P12_PASSWORD: ${{ secrets.STORE_CERT_P12_PASSWORD }}
+          STORE_APP_PROFILE_BASE64: ${{ secrets.STORE_APP_PROFILE_BASE64 }}
+          STORE_WIDGET_PROFILE_BASE64: ${{ secrets.STORE_WIDGET_PROFILE_BASE64 }}
+        run: |
+          set -euo pipefail
+          keychain="$RUNNER_TEMP/flipperhero-signing.keychain-db"
+          keychain_password="$(openssl rand -hex 32)"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security list-keychains -d user -s "$keychain"
+
+          printf '%s' "$STORE_CERT_P12_BASE64" | base64 -D > "$RUNNER_TEMP/store-distribution.p12"
+          security import "$RUNNER_TEMP/store-distribution.p12" -k "$keychain" -P "$STORE_CERT_P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain"
+
+          profiles="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$profiles"
+          printf '%s' "$STORE_APP_PROFILE_BASE64" | base64 -D > "$RUNNER_TEMP/app.mobileprovision"
+          printf '%s' "$STORE_WIDGET_PROFILE_BASE64" | base64 -D > "$RUNNER_TEMP/widget.mobileprovision"
+          for target in app widget; do
+            security cms -D -i "$RUNNER_TEMP/$target.mobileprovision" > "$RUNNER_TEMP/$target-profile.plist"
+            uuid="$(plutil -extract UUID raw -o - "$RUNNER_TEMP/$target-profile.plist")"
+            cp "$RUNNER_TEMP/$target.mobileprovision" "$profiles/$uuid.mobileprovision"
+          done
+
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>destination</key><string>export</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+            <key>method</key><string>app-store-connect</string>
+            <key>provisioningProfiles</key><dict>
+              <key>io.anycast.flipperhero</key><string>FlipperHero Store FlipperHero</string>
+              <key>io.anycast.flipperhero.Widgets</key><string>FlipperHero Store FlipperHeroWidgets</string>
+            </dict>
+            <key>signingCertificate</key><string>804A0AD6FB2E819201F4BA371DF3725F7A9B1D8A</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>2SM4A4GGBD</string>
+          </dict></plist>
+          PLIST
+
+          xcodebuild -exportArchive \
+            -archivePath build/FlipperHero-Store.xcarchive \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath build/StoreExport
+          unzip -q build/StoreExport/FlipperHero.ipa -d "$RUNNER_TEMP/signed-app"
+          codesign --verify --deep --strict "$RUNNER_TEMP/signed-app/Payload/FlipperHero.app"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FlipperHero-Store-IPA
+          path: build/StoreExport/FlipperHero.ipa
+          if-no-files-found: error
+          retention-days: 3
